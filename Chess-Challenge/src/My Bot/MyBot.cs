@@ -5,6 +5,8 @@ public class MyBot : IChessBot
 {
     // Piece values: null, pawn, knight, bishop, rook, queen, king
     int[] pieceValues = { 0, 100, 300, 300, 500, 900, 10000 };
+    int positiveInfinity = 9999999;
+    int negativeInfinity = -9999999;
 
     public Move Think(Board board, Timer timer)
     {
@@ -15,7 +17,7 @@ public class MyBot : IChessBot
         Move bestMove = Move.NullMove;
         int depth = 2;
 
-        double bestEval = double.NegativeInfinity;
+        int bestEval = negativeInfinity;
 
         if (board.PlyCount == 0)
         {
@@ -29,7 +31,7 @@ public class MyBot : IChessBot
         foreach (Move move in legalMoves)
         {
             board.MakeMove(move);
-            double currentEval = -Search(board, depth, false);
+            int currentEval = -Search(board, depth, negativeInfinity, positiveInfinity);
             board.UndoMove(move);
             if (currentEval > bestEval)
             {
@@ -41,16 +43,16 @@ public class MyBot : IChessBot
         return bestMove;
     }
 
-    double EvaluateBoard(Board board)
+    int EvaluateBoard(Board board)
     {
-        double boardValue = 0;
+        int boardValue = 0;
 
         // Material Score
         foreach (PieceList list in board.GetAllPieceLists())
         {
             foreach (Piece piece in list)
             {
-                double negativeModifier = piece.IsWhite ? 1 : -1;
+                int negativeModifier = piece.IsWhite ? 1 : -1;
 
                 boardValue += negativeModifier * pieceValues[(int)piece.PieceType];
             }
@@ -60,7 +62,8 @@ public class MyBot : IChessBot
         return perspective * boardValue;
     }
 
-    double Search(Board board, int depth, bool isMaximizingPlayer)
+
+    int Search(Board board, int depth, int alpha, int beta)
     {
         if (depth == 0)
         {
@@ -73,55 +76,24 @@ public class MyBot : IChessBot
         {
             if (board.IsInCheck())
             {
-
-                return double.NegativeInfinity;
-
+                return negativeInfinity;
             }
             return 0;
         }
 
-        double bestEval = double.NegativeInfinity;
-
         foreach (Move move in legalMoves)
         {
             board.MakeMove(move);
-            double currentEval = -Search(board, depth - 1, false);
-            bestEval = Math.Max(bestEval, currentEval);
+            int currentEval = -Search(board, depth - 1, -beta, -alpha);
             board.UndoMove(move);
-        }
-        return bestEval;
 
-        /*if (isMaximizingPlayer)
-        {
-            double bestEval = double.NegativeInfinity;
-
-            foreach (Move move in legalMoves)
+            if (currentEval >= beta)
             {
-                board.MakeMove(move);
-                double currentEval = Search(board, depth - 1, false);
-                board.UndoMove(move); 
-                if (currentEval > bestEval)
-                {
-                    bestEval = currentEval;
-                }
+                return beta;
             }
-            return bestEval;
+            alpha = Math.Max(alpha, currentEval);
         }
-        else
-        {
-            double bestEval = double.PositiveInfinity;
-
-            foreach (Move move in legalMoves)
-            {
-                board.MakeMove(move);
-                double currentEval = Search(board, depth - 1, true);
-                board.UndoMove(move);
-                if (currentEval < bestEval)
-                {
-                    bestEval = currentEval;
-                }
-            }
-            return bestEval;
-        }*/
+        return alpha;
     }
+
 }
