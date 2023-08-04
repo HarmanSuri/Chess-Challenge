@@ -15,49 +15,29 @@ public class MyBot : IChessBot
         Move bestMove = Move.NullMove;
         int depth = 2;
 
-        if (board.IsWhiteToMove)
+        double bestEval = double.NegativeInfinity;
+
+        if (board.PlyCount == 0)
         {
-            double bestEval = double.NegativeInfinity;
+            legalMoves = whiteOpens;
+        }
+        else if (board.PlyCount == 1)
+        {
+            legalMoves = blackOpens;
+        }
 
-            if (board.PlyCount == 0)
+        foreach (Move move in legalMoves)
+        {
+            board.MakeMove(move);
+            double currentEval = -Search(board, depth, false);
+            board.UndoMove(move);
+            if (currentEval > bestEval)
             {
-                //legalMoves = whiteOpens;
-            }
-
-            foreach (Move move in legalMoves)
-            {
-                board.MakeMove(move);
-                double currentEval = Minimax(board, depth, false);
-                board.UndoMove(move);
-                if (currentEval > bestEval)
-                {
-                    bestEval = currentEval;
-                    bestMove = move;
-                }
+                bestEval = currentEval;
+                bestMove = move;
             }
         }
-        else
-        {
-            double bestEval = double.PositiveInfinity;
-
-            if (board.PlyCount == 1)
-            {
-                //legalMoves = blackOpens;
-            }
-
-            foreach (Move move in legalMoves)
-            {
-                board.MakeMove(move);
-                double currentEval = Minimax(board, depth, true);
-                board.UndoMove(move);
-                if (currentEval < bestEval)
-                {
-                    bestEval = currentEval;
-                    bestMove = move;
-                }
-            }
-        }
-        Console.WriteLine(EvaluateBoard(board));
+        //Console.WriteLine(EvaluateBoard(board));
         return bestMove;
     }
 
@@ -65,22 +45,7 @@ public class MyBot : IChessBot
     {
         double boardValue = 0;
 
-        if (board.IsInCheckmate())
-        {
-            if (board.SquareIsAttackedByOpponent(board.GetKingSquare(true)))
-            {
-                return double.NegativeInfinity;
-            }
-            else
-            {
-                return double.PositiveInfinity;
-            }
-        }
-        else if (board.IsDraw())
-        {
-            return 0;
-        }
-
+        // Material Score
         foreach (PieceList list in board.GetAllPieceLists())
         {
             foreach (Piece piece in list)
@@ -91,42 +56,49 @@ public class MyBot : IChessBot
             }
         }
 
-        // knights on edge
-        foreach (Piece piece in board.GetPieceList(PieceType.Knight, true))
-        {
-            if (piece.Square.File == 0 || piece.Square.File == 7)
-            {
-                boardValue += -100;
-            }
-        }
-        foreach (Piece piece in board.GetPieceList(PieceType.Knight, false))
-        {
-            if (piece.Square.File == 0 || piece.Square.File == 7)
-            {
-                boardValue += 100;
-            }
-        }
-
-        return boardValue;
+        int perspective = board.IsWhiteToMove ? 1 : -1;
+        return perspective * boardValue;
     }
 
-    double Minimax(Board board, int depth, bool isMaximizingPlayer)
+    double Search(Board board, int depth, bool isMaximizingPlayer)
     {
-        if (depth == 0 || board.IsInCheckmate() || board.IsDraw())
+        if (depth == 0)
         {
             return EvaluateBoard(board);
         }
 
         Move[] legalMoves = board.GetLegalMoves();
-        
-        if (isMaximizingPlayer)
+
+        if (legalMoves.Length == 0)
+        {
+            if (board.IsInCheck())
+            {
+
+                return double.NegativeInfinity;
+
+            }
+            return 0;
+        }
+
+        double bestEval = double.NegativeInfinity;
+
+        foreach (Move move in legalMoves)
+        {
+            board.MakeMove(move);
+            double currentEval = -Search(board, depth - 1, false);
+            bestEval = Math.Max(bestEval, currentEval);
+            board.UndoMove(move);
+        }
+        return bestEval;
+
+        /*if (isMaximizingPlayer)
         {
             double bestEval = double.NegativeInfinity;
 
             foreach (Move move in legalMoves)
             {
                 board.MakeMove(move);
-                double currentEval = Minimax(board, depth - 1, false);
+                double currentEval = Search(board, depth - 1, false);
                 board.UndoMove(move); 
                 if (currentEval > bestEval)
                 {
@@ -142,7 +114,7 @@ public class MyBot : IChessBot
             foreach (Move move in legalMoves)
             {
                 board.MakeMove(move);
-                double currentEval = Minimax(board, depth - 1, true);
+                double currentEval = Search(board, depth - 1, true);
                 board.UndoMove(move);
                 if (currentEval < bestEval)
                 {
@@ -150,6 +122,6 @@ public class MyBot : IChessBot
                 }
             }
             return bestEval;
-        }
+        }*/
     }
 }
